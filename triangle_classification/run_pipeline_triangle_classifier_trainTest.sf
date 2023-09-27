@@ -1,0 +1,154 @@
+import pandas as pd
+
+
+rule target:
+    input:
+        test_pred_results='{{ classify_dir }}prediction_results_test.csv',
+        cv_results='{{ classify_dir }}prediction_results_all.csv'
+
+
+rule join_tables_folds:
+    input:
+        pred_results=expand('{{ classify_dir }}prediction_results_{fold}.csv', fold=range({{ nb_folds }}))
+    output:
+        full_table='{{ classify_dir }}prediction_results_all.csv'
+    run:
+        df_list = []
+        for pr in input.pred_results:
+            df_list.append(pd.read_csv(pr, index_col=None))
+        out_df = pd.concat(df_list)
+        out_df.to_csv(output.full_table, index=False)
+
+
+rule classify_test:
+    input:
+        embedding='{{ out_dir }}embedding_-1.pkl',
+        classifier='{{ out_dir }}classifier_-1.pkl',
+        peaks_dir='{{ out_dir }}recomposed_peaks_test/'
+    threads: 1
+    output:
+        pred_results = '{{ classify_dir }}prediction_results_test.csv'
+    shell:
+        """
+        python {{ __basedir__ }}classification/classify.py \
+            --embedding {input.embedding} \
+            --classifier {input.classifier} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold -1 \
+            --nb-folds {{ nb_folds }} \
+            --feature-mode {{ feature_mode }} \
+            --out-csv {output.pred_results}
+        """
+
+
+rule classify_folds:
+    input:
+        embedding='{{ out_dir }}embedding_{fold}.pkl',
+        classifier='{{ out_dir }}classifier_{fold}.pkl',
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: 1
+    output:
+        pred_results = '{{ classify_dir }}prediction_results_{fold}.csv'
+    shell:
+        """
+        python {{ __basedir__ }}classification/classify.py \
+            --embedding {input.embedding} \
+            --classifier {input.classifier} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --feature-mode {{ feature_mode }} \
+            --out-csv {output.pred_results}
+        """
+
+
+rule train_classifier:
+    input:
+        embedding='{{ out_dir }}embedding_{fold}.pkl',
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: workflow.cores
+    output:
+        classifier='{{ out_dir }}classifier_{fold}.pkl'
+    shell:
+        """
+        python {{ __basedir__ }}classification/train_classifier.py \
+            --embedding {input.embedding} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --classifier-type {{ classifier_type }} \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --feature-mode {{ feature_mode }} \
+            --classifier-out {output.classifier}
+        """
+
+rule make_embedding_folds:
+    input:
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: 1
+    output:
+        embedding='{{ out_dir }}embedding_{fold}.pkl'
+    shell:
+        """
+        python {{ __basedir__ }}classification/make_embedding.py \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --resolution {{ geom_resolution }} \
+            --radius {{ radius }} \
+            --embedding {output.embedding}
+        """
+
+
+rule recompose_coordinates_test:
+    input:
+        peaks_dir='{{ out_dir }}peaks_test/'
+    threads: workflow.cores
+    output:
+        recomposed_peaks_dir=directory('{{ out_dir }}recomposed_peaks_test/')
+    shell:
+        """
+        python {{ __basedir__ }}coordinate_recomposition/recompose_coordinates.py \
+            --peaks-dir {input.peaks_dir} \
+            --input-type {{ input_type }} \
+            --max-nb-tags {{ max_nb_tags }} {% if grouped_peaks %} --grouped-peaks {% endif %} \
+            --out-dir {output.recomposed_peaks_dir} \
+            --cores {threads}
+        """
+
+rule recompose_coordinates:
+    input:
+        peaks_dir='{{ out_dir }}peaks/'
+    threads: workflow.cores
+    output:
+        recomposed_peaks_dir=directory('{{ out_dir }}recomposed_peaks/')
+    shell:
+        """
+        python {{ __basedir__ }}coordinate_recomposition/recompose_coordinates.py \
+            --peaks-dir {input.peaks_dir} \
+            --input-type {{ input_type }} \
+            --max-nb-tags {{ max_nb_tags }} {% if grouped_peaks %} --grouped-peaks {% endif %} \
+            --out-dir {output.recomposed_peaks_dir} \
+            --cores {threads}
+        """
+
+rule get_FRET_values_test:
+    threads: workflow.cores
+    output:
+        peaks_dir=directory('{{ out_dir }}peaks_test/')
+    shell:
+        """
+        python {{ __basedir__ }}triangle_classifier/parse_txt_files.py \
+            --in-dir {{ test_dir }} \
+            --out-dir {{ out_dir }}peaks_test
+        """
+
+rule get_FRET_values:
+    threads: workflow.cores
+    output:
+        peaks_dir=directory('{{ out_dir }}peaks/')
+    shell:
+        """
+        python {{ __basedir__ }}triangle_classifier/parse_txt_files.py \
+            --in-dir {{ in_dir }} \
+            --out-dir {{ out_dir }}peaks
+        """
