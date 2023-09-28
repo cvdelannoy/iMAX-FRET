@@ -30,3 +30,9 @@ For structure-aided classifier training and testing for single-molecule data, ru
 python triangle_classification/run_pipeline_triangle_classifier.py 
 ...
 ```
+
+## License
+The code in this repository is licensed under a Creative Commons Attribution-ShareAlike 4.0 International License.
+
+You should have received a copy of the license along with this
+work.  If not, see <https://creativecommons.org/licenses/by-sa/4.0/>.
