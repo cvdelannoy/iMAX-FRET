@@ -1,0 +1,154 @@
+import pandas as pd
+
+
+rule target:
+    input:
+        test_pred_results='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_test.csv',
+        cv_results='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_all.csv'
+
+
+rule join_tables_folds:
+    input:
+        pred_results=expand('/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_{fold}.csv', fold=range(10))
+    output:
+        full_table='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_all.csv'
+    run:
+        df_list = []
+        for pr in input.pred_results:
+            df_list.append(pd.read_csv(pr, index_col=None))
+        out_df = pd.concat(df_list)
+        out_df.to_csv(output.full_table, index=False)
+
+
+rule classify_test:
+    input:
+        embedding='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/embedding_-1.pkl',
+        classifier='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classifier_-1.pkl',
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks_test/'
+    threads: 1
+    output:
+        pred_results = '/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_test.csv'
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/classification/classify.py \
+            --embedding {input.embedding} \
+            --classifier {input.classifier} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold -1 \
+            --nb-folds 10 \
+            --feature-mode both \
+            --out-csv {output.pred_results}
+        """
+
+
+rule classify_folds:
+    input:
+        embedding='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/embedding_{fold}.pkl',
+        classifier='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classifier_{fold}.pkl',
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks/'
+    threads: 1
+    output:
+        pred_results = '/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classification/prediction_results_{fold}.csv'
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/classification/classify.py \
+            --embedding {input.embedding} \
+            --classifier {input.classifier} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds 10 \
+            --feature-mode both \
+            --out-csv {output.pred_results}
+        """
+
+
+rule train_classifier:
+    input:
+        embedding='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/embedding_{fold}.pkl',
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks/'
+    threads: workflow.cores
+    output:
+        classifier='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/classifier_{fold}.pkl'
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/classification/train_classifier.py \
+            --embedding {input.embedding} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --classifier-type xgb \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds 10 \
+            --feature-mode both \
+            --classifier-out {output.classifier}
+        """
+
+rule make_embedding_folds:
+    input:
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks/'
+    threads: 1
+    output:
+        embedding='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/embedding_{fold}.pkl'
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/classification/make_embedding.py \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds 10 \
+            --resolution 10.0 \
+            --radius 80 \
+            --embedding {output.embedding}
+        """
+
+
+rule recompose_coordinates_test:
+    input:
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks_test/'
+    threads: workflow.cores
+    output:
+        recomposed_peaks_dir=directory('/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks_test/')
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/coordinate_recomposition/recompose_coordinates.py \
+            --peaks-dir {input.peaks_dir} \
+            --input-type fret \
+            --max-nb-tags 5  \
+            --out-dir {output.recomposed_peaks_dir} \
+            --cores {threads}
+        """
+
+rule recompose_coordinates:
+    input:
+        peaks_dir='/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks/'
+    threads: workflow.cores
+    output:
+        recomposed_peaks_dir=directory('/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/recomposed_peaks/')
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/coordinate_recomposition/recompose_coordinates.py \
+            --peaks-dir {input.peaks_dir} \
+            --input-type fret \
+            --max-nb-tags 5  \
+            --out-dir {output.recomposed_peaks_dir} \
+            --cores {threads}
+        """
+
+rule get_FRET_values_test:
+    threads: workflow.cores
+    output:
+        peaks_dir=directory('/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks_test/')
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/triangle_classifier/parse_txt_files.py \
+            --in-dir data/triangle_classifier/txt_original_nanostructure_corrected_no1234/ \
+            --out-dir /home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks_test
+        """
+
+rule get_FRET_values:
+    threads: workflow.cores
+    output:
+        peaks_dir=directory('/home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks/')
+    shell:
+        """
+        python /home/carlos/PycharmProjects/apex_fingerprinting_simulations/triangle_classifier/parse_txt_files.py \
+            --in-dir data/triangle_classifier/txt_original_nanostructure_corrected_set2_no1234/ \
+            --out-dir /home/carlos/local_data/apex_fingerprinting_simulation/runs/triangle_classifier/20230616_run_pipeline_nanostructure_10fold/peaks
+        """

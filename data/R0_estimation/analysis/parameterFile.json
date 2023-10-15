@@ -1,0 +1,1 @@
+{"axial_rise": 4.1000000000000005, "helix_diameter": 38.0, "r0": 53.800000000000004, "twist": 39.0, "nt_dist": {"triang1": 4, "triang2": 7, "triang3": 10, "triang4": 15}, "dna_shape": "sinusoid", "dye_dist": 0.0, "base_length": 21.0, "HEADER": "\n# TRIANGLE PARAMETERS HYPEROPT-GENERATED PARAMETER FILE\n# timestamp: 23-09-08_21:02:17\n# loss: 0.7140602174950005\n\n"}

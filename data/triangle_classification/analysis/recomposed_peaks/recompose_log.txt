@@ -1,0 +1,5 @@
+pdb_id	nb_tags	rmsd
+1_3_4	3	nan
+1_2_3	3	nan
+1_2_4	3	nan
+2_3_4	3	nan
