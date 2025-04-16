@@ -108,16 +108,4 @@ with open(f'{analysis_dir}summary_stats_cv.yaml', 'w') as fh:
     fh.write(f'accuracy: {accuracy}\n'
              f'accuracy_std: {acc_std}\n'
              f'nb_samples: {len(result_df)}\n')
-ptc(result_df, analysis_dir)
-
-# test set
-result_df = pd.read_csv(f'{classify_dir}prediction_results_test.csv', index_col=None)
-accuracy = np.mean(result_df.pred)
-acc_std = np.std(result_df.groupby('mod_id').pred.mean())
-print(f'overall accuracy test: {accuracy.round(3)}±{acc_std.round(3)}')
-analysis_dir = parse_output_path(f'{out_dir}analysis_test')
-with open(f'{analysis_dir}summary_stats_test.yaml', 'w') as fh:
-    fh.write(f'accuracy: {accuracy}\n'
-             f'accuracy_std: {acc_std}\n'
-             f'nb_samples: {len(result_df)}\n')
-# ptc(result_df, analysis_dir, bootstrap=100)
+# ptc(result_df, analysis_dir)
