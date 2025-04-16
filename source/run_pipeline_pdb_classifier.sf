@@ -1,0 +1,107 @@
+import pandas as pd
+
+
+rule join_tables:
+    input:
+        pred_results=expand('{{ classify_dir }}prediction_results_{fold}.csv', fold=range({{ nb_folds }}))
+    output:
+        full_table='{{ classify_dir }}prediction_results_all.csv'
+    run:
+        df_list = []
+        for pr in input.pred_results:
+            df_list.append(pd.read_csv(pr, index_col=None))
+        out_df = pd.concat(df_list)
+        out_df.to_csv(output.full_table, index=False)
+
+
+rule classify:
+    input:
+        embedding='{{ out_dir }}embedding_{fold}.pkl',
+        classifier='{{ out_dir }}classifier_{fold}.pkl',
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: 1
+    output:
+        pred_results = '{{ classify_dir }}prediction_results_{fold}.csv'
+    shell:
+        """
+        python {{ __basedir__ }}classification/classify.py \
+            --embedding {input.embedding} \
+            --classifier {input.classifier} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --feature-mode {{ feature_mode }} \
+            --out-csv {output.pred_results}
+        """
+
+rule train_classifier:
+    input:
+        embedding='{{ out_dir }}embedding_{fold}.pkl',
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: 1
+    output:
+        classifier='{{ out_dir }}classifier_{fold}.pkl'
+    shell:
+        """
+        python {{ __basedir__ }}classification/train_classifier.py \
+            --embedding {input.embedding} \
+            --peaks-dir {input.peaks_dir}/coords \
+            --classifier-type {{ classifier_type }} \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --feature-mode {{ feature_mode }} \
+            --classifier-out {output.classifier}
+        """
+
+rule make_embedding:
+    input:
+        peaks_dir='{{ out_dir }}recomposed_peaks/'
+    threads: 1
+    output:
+        embedding='{{ out_dir }}embedding_{fold}.pkl'
+    shell:
+        """
+        python {{ __basedir__ }}classification/make_embedding.py \
+            --peaks-dir {input.peaks_dir}/coords \
+            --leave-out-fold {wildcards.fold} \
+            --nb-folds {{ nb_folds }} \
+            --resolution {{ geom_resolution }} \
+            --radius {{ radius }} \
+            --embedding {output.embedding}
+        """
+
+rule recompose_coordinates:
+    input:
+        peaks_dir='{{ out_dir }}peaks/'
+    threads: workflow.cores
+    output:
+        recomposed_peaks_dir=directory('{{ out_dir }}recomposed_peaks/')
+    shell:
+        """
+        python {{ __basedir__ }}coordinate_recomposition/recompose_coordinates.py \
+            --peaks-dir {input.peaks_dir}/fingerprints \
+            --input-type {{ input_type }} \
+            --max-nb-tags {{ max_nb_tags }} {% if grouped_peaks %} --grouped-peaks {% endif %} \
+            --out-dir {output.recomposed_peaks_dir} \
+            --cores {threads}
+        """
+
+rule get_FRET_values:
+    threads: workflow.cores
+    output:
+        peaks_dir=directory('{{ out_dir }}peaks/')
+    shell:
+        """
+        python {{ __basedir__ }}/classification/get_FRET_values.py \
+            --out-dir {{ out_dir }}peaks \
+            --up-list {{ out_dir }}up_list.txt \
+            --pdb-dir {{ pdb_dir }} \
+            --pdb-pattern "{{ pdb_pattern }}" \
+            --linker-length {{ linker_length }} \
+            --buried-txt {{ buried_txt }} \
+            --anchor-type {{ anchor_type }} \
+            --efficiency {{ efficiency }} \
+            --tagged-resn {{ tagged_resn }} \
+            --repeats {{ repeats }} \
+            --cores {threads}
+        """

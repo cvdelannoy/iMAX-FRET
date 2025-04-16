@@ -189,7 +189,7 @@ def parallel_recompose(args):
                     dl = dl_list_fret = dl_list_dist = np.array([get_FRET_distance(fv, (0,100)) for fv in dl_fret])
                 dl_diff = np.mean(np.abs(dl_list_fret - dl_list_dist))
                 dl_diff_list.append(dl_diff)
-            if not len(dl) or np.any(np.isnan(dl)):
+            if not len(dl) or np.any(np.isnan(list(dl))):
                 continue
             try:
                 if type(dl) is not dict:
@@ -200,7 +200,7 @@ def parallel_recompose(args):
             except Exception as e:
                 with open(fail_log, 'a') as fh:
                     fh.write(f'{peak_dict["up_id"]}\tother error: {e}\n')
-        rmsd_dict[tagged_resn] = [get_aligned_rmsd(recomposed_coords, true_coords)
+        rmsd_dict[tagged_resn] = [get_aligned_rmsd(recomposed_coords[0], true_coords)
                      for recomposed_coords, true_coords in zip(coord_mat_list, peak_dict['data'][tagged_resn]['coords'])]
         peak_dict['data'][tagged_resn]['recomposed_coords'] = coord_mat_list
         peak_dict['data'][tagged_resn]['rmsd'] = rmsd_dict[tagged_resn]

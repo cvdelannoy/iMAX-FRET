@@ -141,6 +141,7 @@ def np2embedded(coord_dict, embedder, feature_mode='both'):
         fp_list = []
         if coord_dict[tagged_resn]['recomposed_coords'] is not None:
             for ci, coord in enumerate(coord_dict[tagged_resn]['recomposed_coords']):
+                coord = coord[0]
                 if coord.ndim == 1: coord = np.expand_dims(coord, 0)
                 atm_group = make_atom_group(coord, atm_type='numpy')
                 invars.append(MomentInvariants.from_prody_atomgroup(str(ci), atm_group, split_type=SplitType.RADIUS,

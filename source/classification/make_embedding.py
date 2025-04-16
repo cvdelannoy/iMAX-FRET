@@ -44,7 +44,7 @@ def main(fn_list, embedding_fn, resolution, radius, leave_out_fold, nb_folds):
                 fold_index = np.array([])
             for cidx, coord_list in enumerate(peak_dict['data'][tagged_resn]['recomposed_coords']):
                 if cidx in fold_index: continue
-                atm_group = make_atom_group(coord_list)
+                atm_group = make_atom_group(coord_list[0])
 
                 invars = MomentInvariants.from_prody_atomgroup(str(pi), atm_group,
                                                                split_type=SplitType.RADIUS,
