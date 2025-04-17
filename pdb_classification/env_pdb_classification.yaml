@@ -1,0 +1,23 @@
+name: iMAX-FRET_pdb
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.9.10
+  - pip=21.2.4
+  - scikit-learn=1.0.2
+  - pandas=1.4.1
+  - numpy=1.21.5
+  - prody=2.0.1
+  - seaborn=0.11.2
+  - snakemake=7.3.1
+  - tqdm=4.64.0
+  - tabulate=0.8.10
+  - plotly=6.0.1
+  - xgboost=2.1.4
+  - numba=0.56.3
+  - typer=0.15.2
+  - pytorch=2.6.0
+  - pip:
+      - "--editable=git+https://github.com/TurtleTools/geometricus.git@v0.3.0#egg=geometricus"

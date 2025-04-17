@@ -1,4 +1,11 @@
 # PDB file classification using iMAX-FRET
+
+Run this pipeline using the conda environment `iMAX-FRET_pdb`, as defined in `env_pdb_classification.yaml`:
+```bash
+conda env create -f env_pdb_classification.yaml
+conda activate iMAX-FRET_pdb
+```
+
 This pipeline extracts predicted iMAX-FRET fingerprints from PDB files, trains embeddings and classifiers,
 and evaluates the accuracy of the classifiers, in N-fold cross validation. Example:
 ```bash
