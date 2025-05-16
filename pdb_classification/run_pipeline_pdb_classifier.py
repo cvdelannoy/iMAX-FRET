@@ -44,7 +44,7 @@ parser.add_argument('--input-type', type=str, choices=['fret', 'dist'], default=
 parser.add_argument('--feature-mode', type=str, choices=['fret', 'both'], default='both',
                     help='[default: both]')
 parser.add_argument('--max-nb-tags', type=int, default=5)
-parser.add_argument('--repeats', type=int, default=1)
+parser.add_argument('--repeats', type=int, default=20)
 parser.add_argument('--max-nb-proteins', type=int, default=np.inf)
 parser.add_argument('--nb-folds', type=int, default=10)
 parser.add_argument('--cores', type=int, default=4)
