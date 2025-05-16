@@ -51,6 +51,9 @@ parser.add_argument('--cores', type=int, default=4)
 parser.add_argument('--dryrun', action='store_true')
 args = parser.parse_args()
 
+if args.nb_folds > args.repeats:
+    raise ValueError('Cannot have more folds than repeats!')
+
 out_dir = parse_output_path(args.out_dir, clean=False)
 classify_dir = parse_output_path(out_dir + 'classification')
 
