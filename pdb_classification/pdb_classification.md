@@ -5,6 +5,12 @@ Run this pipeline using the conda environment `iMAX-FRET_pdb`, as defined in `en
 conda env create -f env_pdb_classification.yaml
 conda activate iMAX-FRET_pdb
 ```
+Or run it in a docker container. From this folder:
+```bash
+docker build -t imax-fret-pdb .
+ocker run -it -v /this/dir:/to/that/dir imax-fret-pdb
+```
+
 
 This pipeline extracts predicted iMAX-FRET fingerprints from PDB files, trains embeddings and classifiers,
 and evaluates the accuracy of the classifiers, in N-fold cross validation. Example:
