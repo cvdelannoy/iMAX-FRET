@@ -196,6 +196,8 @@ def parallel_recompose(args):
                     cm = dist_list2dict(dl, nb_tags, grouped_peaks, peak_dict['data'][tagged_resn]['coords'], forced_nb_dists)
                 else:
                     cm = dists2coords(dl, grouped_peaks, peak_dict['data'][tagged_resn]['coords'])
+                    if cm[-1] is np.inf:
+                        raise ValueError('Impossible coordinate combination!')
                 coord_mat_list.append(cm)
             except Exception as e:
                 with open(fail_log, 'a') as fh:
@@ -205,11 +207,16 @@ def parallel_recompose(args):
         peak_dict['data'][tagged_resn]['recomposed_coords'] = coord_mat_list
         peak_dict['data'][tagged_resn]['rmsd'] = rmsd_dict[tagged_resn]
         peak_dict['data'][tagged_resn]['dl_diff'] = dl_diff_list
-    with open(f'{coord_dir}{peak_dict["up_id"]}.pkl', 'wb') as fh:
-        pickle.dump(peak_dict, fh, protocol=pickle.HIGHEST_PROTOCOL)
+
     rmsd_txt = ','.join([str(np.mean(rmsd_dict[tagged_resn])) if len(rmsd_dict[tagged_resn]) else 'nan'
                          for tagged_resn in rmsd_dict])
     nb_tags_txt = ','.join([str(t) for t in nb_tags_list])
+    if rmsd_txt == 'nan':
+        with open(fail_log, 'a') as fh:
+            fh.write(f'{peak_dict["up_id"]}\tImpossible coordinate combination!\n')
+        return
+    with open(f'{coord_dir}{peak_dict["up_id"]}.pkl', 'wb') as fh:
+        pickle.dump(peak_dict, fh, protocol=pickle.HIGHEST_PROTOCOL)
     with open(log, 'a') as fh:
         fh.write(f'{peak_dict["up_id"]}\t{nb_tags_txt}\t{rmsd_txt}\n')
 
