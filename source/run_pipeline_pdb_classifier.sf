@@ -95,6 +95,7 @@ rule get_FRET_values:
         python {{ __basedir__ }}/classification/get_FRET_values.py \
             --out-dir {{ out_dir }}peaks \
             --up-list {{ out_dir }}up_list.txt \
+            --resolution {{ resolution }} \
             --pdb-dir {{ pdb_dir }} \
             --pdb-pattern "{{ pdb_pattern }}" \
             --linker-length {{ linker_length }} \
